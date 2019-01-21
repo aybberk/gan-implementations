@@ -3,9 +3,11 @@ import torch.nn.functional as F
 from helpers import Swish
     
 class Discriminator(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, size):
         super().__init__()
         
+        
+        self.size = size
         def conv(in_channels, out_channels, bn=True, activation=torch.nn.LeakyReLU(0.2)):
             layers = []
             layers.append(torch.nn.Conv2d(in_channels=in_channels, 
@@ -28,6 +30,11 @@ class Discriminator(torch.nn.Module):
         self.conv2 = conv(128, 256)
         self.conv3 = conv(256, 512)
         self.conv4 = conv(512, 1024)
+        
+        if self.size == [128, 128]:
+            self.conv4_128128 = conv(1024,  1024)
+        
+        
         self.conv5 = torch.nn.Conv2d(1024, 1, 4)
         
         
@@ -38,6 +45,11 @@ class Discriminator(torch.nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
+        
+        if self.size == [128, 128]:
+            x = self.conv4_128128(x)
+        
+        
         x = self.conv5(x)
         
         return x.squeeze() 

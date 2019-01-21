@@ -10,22 +10,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
 import torch.utils.data
-from helpers import torch_imshow
+from helpers import torch_imshow, torch_imshow_batch
 
 
 NUM_ITERATIONS = 500000
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 LATENT_DIM = 100
 K = 1
 LOG_EVERY = 15
 NOISE_STD = 1 
 LABEL_SMOOTHING = True
 DEVICE = "cuda"
+IMAGE_SIZE = [64, 64]
 
 
  
 data_transform = transforms.Compose([
-            transforms.Resize([64, 64]),
+            transforms.Resize(IMAGE_SIZE),
             transforms.RandomHorizontalFlip(),
 #            transforms.Grayscale(num_output_channels=3),
             transforms.ToTensor(),
@@ -34,22 +35,19 @@ data_transform = transforms.Compose([
     
     
 mnist_dataset = datasets.MNIST('/home/ayb/DATASETS/mnist', train=True, download=True, transform=data_transform)
-cat_dataset = datasets.ImageFolder(root='/home/ayb/DATASETS/CAT_DATASET', transform=data_transform)
-pokemon_dataset = datasets.ImageFolder(root='/home/ayb/DATASETS/pokemon/pokemon-b', transform=data_transform)
-celeb_dataset = datasets.ImageFolder(root='/home/ayb/DATASETS/celeb', transform=data_transform)    
-toy_dataset = datasets.ImageFolder(root='/home/ayb/DATASETS/toy', transform=data_transform)
-    
+cars_dataset = datasets.ImageFolder(root='/home/ayb/DATASETS/stanford-cars', transform=data_transform)
+
 
 ### CHANGE FIRST ARGUMENT TO CHANGE DATASET ###
-data_loader = torch.utils.data.DataLoader(celeb_dataset,
+data_loader = torch.utils.data.DataLoader(cars_dataset,
                                           batch_size=BATCH_SIZE, 
                                           shuffle=True,
                                           drop_last=True)
 
 
 
-G = Generator().to(DEVICE)
-D = Discriminator().to(DEVICE)
+G = Generator(IMAGE_SIZE).to(DEVICE)
+D = Discriminator(IMAGE_SIZE).to(DEVICE)
 BCE = torch.nn.BCEWithLogitsLoss()
 d_optimizer = torch.optim.Adam(D.parameters(), lr=2e-4, betas=[0.5, 0.999])
 g_optimizer = torch.optim.Adam(G.parameters(), lr=2e-4, betas=[0.5, 0.999])
@@ -61,7 +59,13 @@ g_optimizer = torch.optim.Adam(G.parameters(), lr=2e-4, betas=[0.5, 0.999])
 #except:
 #    iterations_per_epoch = len(data_loader.dataset.train_data) // data_loader.batch_size
     
+
+
 iterations = 0
+
+#to display progress
+fixed_noise = torch.randn(64, LATENT_DIM).to(DEVICE) * NOISE_STD
+
 while iterations < NUM_ITERATIONS:
 #    print("EPOCH: {}".format(epoch))
     for x_data, target in data_loader:
@@ -101,8 +105,8 @@ while iterations < NUM_ITERATIONS:
         
         
         if iterations % LOG_EVERY == 0:
-            x_gen_show = G(torch.randn(1, LATENT_DIM).to(DEVICE))
-            torch_imshow(x_gen_show[0])
+            x_gen_show = G(fixed_noise)
+            torch_imshow_batch(x_gen_show, 8, 8, save=True, name="batch" + str(iterations // LOG_EVERY) + ".jpg")
             print("Iterations: ", iterations)
             print("G_loss:", g_loss.detach().cpu().numpy())
             print("D_loss:", d_loss.detach().cpu().numpy())

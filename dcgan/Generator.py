@@ -3,11 +3,13 @@ import torch.nn.functional as F
 from helpers import Swish
 
 class Generator(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, size):
         super().__init__()
 #        
-#        self.activation = torch.nn.ReLU()
-        self.activation = Swish()
+        
+        self.size = size
+        self.activation = torch.nn.ReLU()
+#       self.activation = Swish()
         
         def convT(in_channels, out_channels, stride=2, padding=1, bn=True, activation=torch.nn.ReLU()):
             layers = []
@@ -31,6 +33,11 @@ class Generator(torch.nn.Module):
         self.convT1 = convT(1024, 512)
         self.convT2 = convT(512,  256)
         self.convT3 = convT(256,  128)
+        
+        if self.size == [128, 128]:
+            self.convT3_128128 = convT(128,  128)
+        
+        
         self.convT4 = convT(128,  3, bn=False, activation=torch.nn.Tanh())
         
 
@@ -42,6 +49,10 @@ class Generator(torch.nn.Module):
         x = self.convT1(x)
         x = self.convT2(x)
         x = self.convT3(x)
+        
+        if self.size == [128, 128]:
+            x = self.convT3_128128(x)
+        
         x = self.convT4(x)
         return x
 
